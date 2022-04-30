@@ -1,0 +1,46 @@
+version: '3.1'
+services:
+  database:
+    image: 'postgres:latest'
+    network_mode: "host"
+    restart: always
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${STORAGE_USER}
+      POSTGRES_PASSWORD: ${STORAGE_PASSWORD}
+      POSTGRES_DB: ${STORAGE_DB_NAME}
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./db-data/:/var/lib/postgresql/data/
+    expose:
+      - ${STORAGE_PORT}
+    ports:
+      - "${STORAGE_PORT}:${STORAGE_PORT}"
+    command: -p ${STORAGE_PORT}
+
+  storage-service:
+    network_mode: "host"
+    build:
+      context: .
+      dockerfile: docker/storage-service.dockerfile
+    ports:
+      - "${HTTP_STORAGE_SERVICE_PORT}:${HTTP_STORAGE_SERVICE_PORT}"
+    restart: unless-stopped
+    links:
+      - database
+
+  api:
+    network_mode: "host"
+    build:
+      context: .
+      dockerfile: docker/api.dockerfile
+    ports:
+      - "${HTTP_API_PORT}:${HTTP_API_PORT}"
+    restart: unless-stopped
+
+  bot:
+    network_mode: "host"
+    build:
+      context: .
+      dockerfile: docker/bot.dockerfile
+    restart: unless-stopped
